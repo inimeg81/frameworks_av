@@ -47,6 +47,7 @@
 #include <system/audio_policy.h>
 
 #include <audio_utils/primitives.h>
+#include "TrackUtils.h"
 
 namespace android {
 // ---------------------------------------------------------------------------
@@ -169,6 +170,10 @@ AudioTrack::AudioTrack(
 AudioTrack::~AudioTrack()
 {
     ALOGV_IF(mSharedBuffer != 0, "Destructor sharedBuffer: %p", mSharedBuffer->pointer());
+    if(TrackUtils::SetConcurrencyParameterForRemotePlaybackSession(
+            mStreamType, mFormat, mFlags, false/*sesion active*/)) {
+        ALOGE("Reset concurency param failed");
+    }
 
     if (mStatus == NO_ERROR) {
         // Make sure that callback function exits in the case where
@@ -264,6 +269,9 @@ status_t AudioTrack::set(
         ALOGE("8-bit data in shared memory is not supported");
         return BAD_VALUE;
     }
+
+    //Force fast flag for ringtone/enforce audible/alarm/notification/system sound
+    TrackUtils::setFastFlag(streamType, flags);
 
     // force direct flag if format is not linear PCM
     if (!audio_is_linear_pcm(format)) {
@@ -380,7 +388,6 @@ status_t AudioTrack::set(
         mAudioTrackThread = new AudioTrackThread(*this, threadCanCallJava);
         mAudioTrackThread->run("AudioTrack", ANDROID_PRIORITY_AUDIO, 0 /*stack*/);
     }
-
     // create the IAudioTrack
     status_t status = createTrack_l(streamType,
                                   sampleRate,
@@ -423,6 +430,12 @@ status_t AudioTrack::set(
 #ifndef QCOM_HARDWARE
     AudioSystem::acquireAudioSessionId(mSessionId);
 #endif
+
+    if(TrackUtils::SetConcurrencyParameterForRemotePlaybackSession(
+            mStreamType, mFormat, mFlags, true/*sesion active*/)) {
+        ALOGE("Set concurency param failed");
+        return INVALID_OPERATION;
+    }
     return NO_ERROR;
 }
 
@@ -1713,5 +1726,4 @@ void AudioTrack::AudioTrackThread::resume()
         mMyCond.signal();
     }
 }
-
 }; // namespace android
