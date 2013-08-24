@@ -964,12 +964,16 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
             // tenc box contains 1 byte version, 3 byte flags, 3 byte default algorithm id, one byte
             // default IV size, 16 bytes default KeyID
             // (ISO 23001-7)
-            char buf[4];
+            union {
+            	char buf[4];
+            	int32_t bufl[4/sizeof(int32_t)];
+            }; 
             memset(buf, 0, 4);
             if (mDataSource->readAt(data_offset + 4, buf + 1, 3) < 3) {
                 return ERROR_IO;
             }
-            uint32_t defaultAlgorithmId = ntohl(*((int32_t*)buf));
+            int32_t first_id = bufl[0];
+            uint32_t defaultAlgorithmId = ntohl(first_id);
             if (defaultAlgorithmId > 1) {
                 // only 0 (clear) and 1 (AES-128) are valid
                 return ERROR_MALFORMED;
@@ -979,7 +983,8 @@ status_t MPEG4Extractor::parseChunk(off64_t *offset, int depth) {
             if (mDataSource->readAt(data_offset + 7, buf + 3, 1) < 1) {
                 return ERROR_IO;
             }
-            uint32_t defaultIVSize = ntohl(*((int32_t*)buf));
+            first_id = bufl[0];
+            uint32_t defaultIVSize = ntohl(first_id);
 
             if ((defaultAlgorithmId == 0 && defaultIVSize != 0) ||
                     (defaultAlgorithmId != 0 && defaultIVSize == 0)) {
