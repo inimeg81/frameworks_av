@@ -142,6 +142,8 @@ struct QCUtils {
             const uint8_t *ptr, const sp<MetaData> &meta);
 
     static int32_t checkIsInterlace(sp<MetaData> &meta);
+
+    static int32_t getEncoderTypeFlags();
 };
 
 }
