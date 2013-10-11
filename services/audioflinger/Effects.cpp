@@ -447,7 +447,7 @@ status_t AudioFlinger::EffectModule::configure()
             latency = pbt->latency_l();
         }
 
-        data[1] = latency;
+        data32[1] = latency;
         (*mEffectInterface)->command(mEffectInterface,
                                      EFFECT_CMD_SET_PARAM,
                                      sizeof(effect_param_t) + 8,
